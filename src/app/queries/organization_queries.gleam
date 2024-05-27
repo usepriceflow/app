@@ -10,7 +10,7 @@ pub fn create_organization(
     "
   INSERT INTO organizations (name)
   VALUES ($1)
-  RETURNING id, name
+  RETURNING id, name;
 "
 
   let returned =
@@ -23,6 +23,23 @@ pub fn create_organization(
 
   case returned {
     Ok(Returned(_, [organization, ..])) -> Ok(organization)
+    _ -> Error(Nil)
+  }
+}
+
+pub fn list_organizations(
+  connection: Connection,
+) -> Result(List(Organization), Nil) {
+  let sql =
+    "
+  SELECT id, name
+  FROM organizations;
+  "
+
+  let returned = pgo.execute(sql, connection, [], organization_decoder)
+
+  case returned {
+    Ok(Returned(_, organizations)) -> Ok(organizations)
     _ -> Error(Nil)
   }
 }

@@ -34,3 +34,24 @@ pub fn create_organization(req: Request, ctx: Context) -> Response {
     Error(Nil) -> wisp.unprocessable_entity()
   }
 }
+
+pub fn list_organizations(ctx: Context) -> Response {
+  let result = {
+    use organizations <- try(queries.list_organizations(ctx.db))
+    Ok(
+      json.to_string_builder(
+        json.array(organizations, fn(organization) {
+          json.object([
+            #("id", json.int(organization.id)),
+            #("name", json.string(organization.name)),
+          ])
+        }),
+      ),
+    )
+  }
+
+  case result {
+    Ok(json) -> wisp.json_response(json, 200)
+    Error(Nil) -> wisp.unprocessable_entity()
+  }
+}
