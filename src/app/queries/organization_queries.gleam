@@ -8,8 +8,8 @@ pub fn create_organization(
 ) -> Result(Organization, Nil) {
   let sql =
     "
-  INSERT INTO organizations (name, created_at, updated_at)
-  VALUES ($1, NOW(), NOW())
+  INSERT INTO organizations (name)
+  VALUES ($1)
   RETURNING id, name
 "
 
