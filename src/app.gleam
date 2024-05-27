@@ -1,5 +1,5 @@
 import app/router
-import app/web.{Context}
+import app/types/web_types.{Context}
 import envoy
 import gleam/erlang/process
 import gleam/option
