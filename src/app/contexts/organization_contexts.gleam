@@ -1,8 +1,14 @@
-import app/types/organization_types.{
-  type NewOrganization, type Organization, NewOrganization, Organization,
-}
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/result
+
+pub type NewOrganization {
+  NewOrganization(name: String)
+}
+
+pub type Organization {
+  Organization(id: Int, name: String)
+}
+
 
 // Decodes the return from the db insert
 pub fn organization_decoder(
