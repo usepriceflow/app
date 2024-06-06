@@ -34,3 +34,26 @@ pub fn create_user(req: Request, ctx: Context) -> Response {
     Error(Nil) -> wisp.unprocessable_entity()
   }
 }
+
+pub fn list_users(ctx: Context) -> Response {
+  let result = {
+    use users <- try(queries.list_users(ctx.db))
+    Ok(
+      json.to_string_builder(
+        json.array(users, fn(user) {
+          json.object([
+            #("id", json.int(user.id)),
+            #("name", json.string(user.name)),
+            #("email", json.string(user.email)),
+            #("password_hash", json.string(user.password_hash)),
+          ])
+        }),
+      ),
+    )
+  }
+
+  case result {
+    Ok(json) -> wisp.json_response(json, 200)
+    Error(Nil) -> wisp.unprocessable_entity()
+  }
+}

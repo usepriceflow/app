@@ -19,6 +19,7 @@ pub fn create_organization(req: Request, ctx: Context) -> Response {
     ))
 
     // Construct a JSON payload with the id and name of the newly created organization.
+    // TODO: case on the organization result, return Ok or Error
     Ok(
       json.to_string_builder(
         json.object([
