@@ -1,6 +1,6 @@
-import app/decoders/organization_decoders as decoders
+import app/contexts/organization_contexts as contexts
+import app/contexts/web_contexts.{type Context}
 import app/queries/organization_queries as queries
-import app/types/web_types.{type Context}
 import gleam/json
 import gleam/result.{try}
 import wisp.{type Request, type Response}
@@ -10,7 +10,7 @@ pub fn create_organization(req: Request, ctx: Context) -> Response {
 
   let result = {
     // Decode the JSON into a NewOrganization record.
-    use new_organization <- try(decoders.new_organization_decoder(json))
+    use new_organization <- try(contexts.new_organization_decoder(json))
 
     // Save the organization to the database.
     use organization <- try(queries.create_organization(
