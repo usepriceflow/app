@@ -1,5 +1,4 @@
-import app/decoders/organization_decoders.{organization_decoder}
-import app/types/organization_types.{type NewOrganization, type Organization}
+import app/contexts/organization_contexts.{type NewOrganization, type Organization, organization_decoder}
 import gleam/pgo.{type Connection, Returned}
 
 pub fn create_organization(
