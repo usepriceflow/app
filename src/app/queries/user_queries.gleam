@@ -26,3 +26,18 @@ pub fn create_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
     _ -> Error(Nil)
   }
 }
+
+pub fn list_users(connection: Connection) -> Result(List(User), Nil) {
+  let sql =
+    "
+  SELECT id, name, email, password_hash
+  FROM users;
+  "
+
+  let returned = pgo.execute(sql, connection, [], user_decoder)
+
+  case returned {
+    Ok(Returned(_, users)) -> Ok(users)
+    _ -> Error(Nil)
+  }
+}
