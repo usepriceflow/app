@@ -34,13 +34,14 @@ pub fn organization_decoder(
 }
 
 /// Decodes the JSON blob from the POST to /organizations
-pub fn new_organization_decoder(json: Dynamic) -> Result(NewOrganization, Nil) {
+pub fn new_organization_decoder(
+  json: Dynamic,
+) -> Result(NewOrganization, List(DecodeError)) {
   let decoder =
     dynamic.decode1(NewOrganization, dynamic.field("name", dynamic.string))
 
   json
   |> decoder()
-  |> result.nil_error()
 }
 
 // Routers ---------------------------------------------------------------------
@@ -64,29 +65,29 @@ pub fn one(req: Request, ctx: Context, id: String) -> Response {
 
 pub fn create(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
+  let maybe_organization = new_organization_decoder(json)
+  let organization = case maybe_organization {
+    Ok(organization) -> create_organization(ctx.db, organization)
+    Error(_) -> Error(InternalError)
+  }
 
-  let result = {
-    // Decode the JSON into a NewOrganization record.
-    use new_organization <- try(new_organization_decoder(json))
-
-    // Save the organization to the database.
-    use organization <- try(create_organization(ctx.db, new_organization))
-
-    // Construct a JSON payload with the id and name of the newly created organization.
-    // TODO: case on the organization result, return Ok or Error
-    Ok(
-      json.to_string_builder(
+  case organization {
+    Ok(organization) -> {
+      let data =
         json.object([
           #("id", json.int(organization.id)),
           #("name", json.string(organization.name)),
-        ]),
-      ),
-    )
-  }
+        ])
 
-  case result {
-    Ok(json) -> wisp.json_response(json, 201)
-    Error(Nil) -> wisp.unprocessable_entity()
+      let response =
+        json.to_string_builder(
+          json.object([#("status", json.string("success")), #("data", data)]),
+        )
+
+      wisp.json_response(response, 200)
+    }
+
+    Error(_) -> wisp.internal_server_error()
   }
 }
 
@@ -142,7 +143,7 @@ pub fn show(ctx: Context, id: String) -> Response {
       wisp.json_response(response, 404)
     }
 
-    Error(InternalError) -> wisp.internal_server_error()
+    Error(_) -> wisp.internal_server_error()
   }
 }
 
@@ -151,7 +152,7 @@ pub fn show(ctx: Context, id: String) -> Response {
 pub fn create_organization(
   connection: Connection,
   organization: NewOrganization,
-) -> Result(Organization, Nil) {
+) -> Result(Organization, AppErrors) {
   let sql =
     "
   INSERT INTO organizations (name)
@@ -169,7 +170,7 @@ pub fn create_organization(
 
   case returned {
     Ok(Returned(_, [organization, ..])) -> Ok(organization)
-    _ -> Error(Nil)
+    _ -> Error(InternalError)
   }
 }
 
