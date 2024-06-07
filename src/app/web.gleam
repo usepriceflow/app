@@ -5,6 +5,11 @@ pub type Context {
   Context(db: Connection)
 }
 
+pub type AppErrors {
+  NotFound(id: String)
+  InternalError
+}
+
 pub fn middleware(
   req: Request,
   handle_request: fn(Request) -> Response,

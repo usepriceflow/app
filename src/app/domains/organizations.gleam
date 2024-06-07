@@ -1,20 +1,68 @@
-import app/web.{type Context}
+import app/web.{type AppErrors, type Context, InternalError, NotFound}
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/http.{Get, Post}
+import gleam/int
 import gleam/json
 import gleam/pgo.{type Connection, Returned}
 import gleam/result.{try}
 import wisp.{type Request, type Response}
 
+// Types -----------------------------------------------------------------------
+
+pub type NewOrganization {
+  NewOrganization(name: String)
+}
+
+pub type Organization {
+  Organization(id: Int, name: String)
+}
+
+// Decoders --------------------------------------------------------------------
+
+/// Decodes the return from the db insert
+pub fn organization_decoder(
+  tuple: Dynamic,
+) -> Result(Organization, List(DecodeError)) {
+  let decoder =
+    dynamic.decode2(
+      Organization,
+      dynamic.element(0, dynamic.int),
+      dynamic.element(1, dynamic.string),
+    )
+
+  decoder(tuple)
+}
+
+/// Decodes the JSON blob from the POST to /organizations
+pub fn new_organization_decoder(json: Dynamic) -> Result(NewOrganization, Nil) {
+  let decoder =
+    dynamic.decode1(NewOrganization, dynamic.field("name", dynamic.string))
+
+  json
+  |> decoder()
+  |> result.nil_error()
+}
+
+// Routers ---------------------------------------------------------------------
+
 pub fn all(req: Request, ctx: Context) -> Response {
   case req.method {
-    Post -> create_organization(req, ctx)
-    Get -> list_organizations(ctx)
+    Get -> index(ctx)
+    Post -> create(req, ctx)
     _ -> wisp.method_not_allowed([Post, Get])
   }
 }
 
-pub fn create_organization(req: Request, ctx: Context) -> Response {
+pub fn one(req: Request, ctx: Context, id: String) -> Response {
+  case req.method {
+    Get -> show(ctx, id)
+    _ -> wisp.method_not_allowed([Get])
+  }
+}
+
+// Controllers -----------------------------------------------------------------
+
+pub fn create(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
 
   let result = {
@@ -22,7 +70,7 @@ pub fn create_organization(req: Request, ctx: Context) -> Response {
     use new_organization <- try(new_organization_decoder(json))
 
     // Save the organization to the database.
-    use organization <- try(insert_organization(ctx.db, new_organization))
+    use organization <- try(create_organization(ctx.db, new_organization))
 
     // Construct a JSON payload with the id and name of the newly created organization.
     // TODO: case on the organization result, return Ok or Error
@@ -42,9 +90,9 @@ pub fn create_organization(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn list_organizations(ctx: Context) -> Response {
+pub fn index(ctx: Context) -> Response {
   let result = {
-    use organizations <- try(read_organizations(ctx.db))
+    use organizations <- try(fetch_organizations(ctx.db))
     Ok(
       json.to_string_builder(
         json.array(organizations, fn(organization) {
@@ -63,7 +111,44 @@ pub fn list_organizations(ctx: Context) -> Response {
   }
 }
 
-pub fn insert_organization(
+pub fn show(ctx: Context, id: String) -> Response {
+  let id = int.parse(id) |> result.unwrap(0)
+  let result = get_organization_by_id(ctx.db, id)
+
+  case result {
+    Ok(Organization(id: id, name: name)) -> {
+      let data =
+        json.object([#("id", json.int(id)), #("name", json.string(name))])
+
+      let response =
+        json.to_string_builder(
+          json.object([#("status", json.string("success")), #("data", data)]),
+        )
+
+      wisp.json_response(response, 200)
+    }
+
+    Error(NotFound(id)) -> {
+      let details = json.object([#("id", json.string(id))])
+      let response =
+        json.to_string_builder(
+          json.object([
+            #("status", json.string("error")),
+            #("message", json.string("Organization not found.")),
+            #("details", details),
+          ]),
+        )
+
+      wisp.json_response(response, 404)
+    }
+
+    Error(InternalError) -> wisp.internal_server_error()
+  }
+}
+
+// Queries ---------------------------------------------------------------------
+
+pub fn create_organization(
   connection: Connection,
   organization: NewOrganization,
 ) -> Result(Organization, Nil) {
@@ -88,7 +173,7 @@ pub fn insert_organization(
   }
 }
 
-pub fn read_organizations(
+pub fn fetch_organizations(
   connection: Connection,
 ) -> Result(List(Organization), Nil) {
   let sql =
@@ -105,34 +190,22 @@ pub fn read_organizations(
   }
 }
 
-pub type NewOrganization {
-  NewOrganization(name: String)
-}
+pub fn get_organization_by_id(
+  connection: Connection,
+  id: Int,
+) -> Result(Organization, AppErrors) {
+  let sql =
+    "
+  SELECT id, name
+  FROM organizations
+  WHERE id = $1
+  "
 
-pub type Organization {
-  Organization(id: Int, name: String)
-}
+  let returned =
+    pgo.execute(sql, connection, [pgo.int(id)], organization_decoder)
 
-// Decodes the return from the db insert
-pub fn organization_decoder(
-  tuple: Dynamic,
-) -> Result(Organization, List(DecodeError)) {
-  let decoder =
-    dynamic.decode2(
-      Organization,
-      dynamic.element(0, dynamic.int),
-      dynamic.element(1, dynamic.string),
-    )
-
-  decoder(tuple)
-}
-
-// Decodes the JSON blob from the POST to /organizations
-pub fn new_organization_decoder(json: Dynamic) -> Result(NewOrganization, Nil) {
-  let decoder =
-    dynamic.decode1(NewOrganization, dynamic.field("name", dynamic.string))
-
-  json
-  |> decoder()
-  |> result.nil_error()
+  case returned {
+    Ok(Returned(_, [organization])) -> Ok(organization)
+    _ -> Error(NotFound(int.to_string(id)))
+  }
 }
