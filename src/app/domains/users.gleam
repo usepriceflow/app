@@ -8,7 +8,7 @@ import gleam/pgo.{type Connection, Returned}
 import gleam/result.{try}
 import wisp.{type Request, type Response}
 
-// Types
+// Types -----------------------------------------------------------------------
 
 pub type NewUser {
   NewUser(name: String, email: String, password: String)
@@ -18,7 +18,7 @@ pub type User {
   User(id: Int, name: String, email: String, password_hash: String)
 }
 
-// Decoders
+// Decoders --------------------------------------------------------------------
 
 /// Decodes the JSON blob from the POST to /users
 pub fn new_user_decoder(json: Dynamic) -> Result(NewUser, Nil) {
@@ -49,19 +49,19 @@ pub fn user_decoder(tuple: Dynamic) -> Result(User, List(DecodeError)) {
   decoder(tuple)
 }
 
-// Routing
+// Routers ---------------------------------------------------------------------
 
 pub fn all(req: Request, ctx: Context) -> Response {
   case req.method {
-    Post -> create_user(req, ctx)
-    Get -> list_users(ctx)
+    Get -> index(ctx)
+    Post -> create(req, ctx)
     _ -> wisp.method_not_allowed([Post, Get])
   }
 }
 
-// Request Handlers
+// Controllers -----------------------------------------------------------------
 
-pub fn create_user(req: Request, ctx: Context) -> Response {
+pub fn create(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
 
   let result = {
@@ -69,7 +69,7 @@ pub fn create_user(req: Request, ctx: Context) -> Response {
     use new_user <- try(new_user_decoder(json))
 
     // Save the user to the database.
-    use user <- try(insert_user(ctx.db, new_user))
+    use user <- try(create_user(ctx.db, new_user))
 
     // Construct a JSON payload with the id and name of the newly created user.
     // TODO: case on the user result, return Ok or Error
@@ -91,9 +91,9 @@ pub fn create_user(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn list_users(ctx: Context) -> Response {
+pub fn index(ctx: Context) -> Response {
   let result = {
-    use users <- try(read_users(ctx.db))
+    use users <- try(fetch_users(ctx.db))
     Ok(
       json.to_string_builder(
         json.array(users, fn(user) {
@@ -114,9 +114,9 @@ pub fn list_users(ctx: Context) -> Response {
   }
 }
 
-// Database Functions
+// Queries ---------------------------------------------------------------------
 
-fn insert_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
+fn create_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
   let sql =
     "
   INSERT INTO users (name, email, password_hash)
@@ -140,7 +140,7 @@ fn insert_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
   }
 }
 
-fn read_users(connection: Connection) -> Result(List(User), Nil) {
+fn fetch_users(connection: Connection) -> Result(List(User), Nil) {
   let sql =
     "
   SELECT id, name, email, password_hash
