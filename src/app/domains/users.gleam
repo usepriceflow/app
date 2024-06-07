@@ -1,10 +1,10 @@
 import antigone
-import app/web.{type Context}
+import app/web.{type AppErrors, type Context, AlreadyExists, InternalError}
 import gleam/bit_array
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/json
-import gleam/pgo.{type Connection, Returned}
+import gleam/pgo.{type Connection, ConstraintViolated, Returned}
 import gleam/result.{try}
 import wisp.{type Request, type Response}
 
@@ -21,7 +21,7 @@ pub type User {
 // Decoders --------------------------------------------------------------------
 
 /// Decodes the JSON blob from the POST to /users
-pub fn new_user_decoder(json: Dynamic) -> Result(NewUser, Nil) {
+pub fn maybe_user_decoder(json: Dynamic) -> Result(NewUser, List(DecodeError)) {
   let decoder =
     dynamic.decode3(
       NewUser,
@@ -30,9 +30,7 @@ pub fn new_user_decoder(json: Dynamic) -> Result(NewUser, Nil) {
       dynamic.field("password", dynamic.string),
     )
 
-  json
-  |> decoder()
-  |> result.nil_error()
+  decoder(json)
 }
 
 // Decodes the return from the db insert
@@ -63,31 +61,50 @@ pub fn all(req: Request, ctx: Context) -> Response {
 
 pub fn create(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
-
-  let result = {
-    // Decode the JSON into a NewUser record.
-    use new_user <- try(new_user_decoder(json))
-
-    // Save the user to the database.
-    use user <- try(create_user(ctx.db, new_user))
-
-    // Construct a JSON payload with the id and name of the newly created user.
-    // TODO: case on the user result, return Ok or Error
-    Ok(
-      json.to_string_builder(
-        json.object([
-          #("id", json.int(user.id)),
-          #("name", json.string(user.name)),
-          #("email", json.string(user.email)),
-          #("password_hash", json.string(user.password_hash)),
-        ]),
-      ),
-    )
+  let maybe_user = maybe_user_decoder(json)
+  let user = case maybe_user {
+    Ok(user) -> create_user(ctx.db, user)
+    Error(_) -> Error(InternalError)
   }
 
-  case result {
-    Ok(json) -> wisp.json_response(json, 201)
-    Error(Nil) -> wisp.unprocessable_entity()
+  case user {
+    Ok(user) -> {
+      let data =
+        json.object([
+          #(
+            "user",
+            json.object([
+              #("id", json.int(user.id)),
+              #("name", json.string(user.name)),
+              #("email", json.string(user.email)),
+            ]),
+          ),
+        ])
+
+      let response =
+        json.to_string_builder(
+          json.object([#("status", json.string("success")), #("data", data)]),
+        )
+
+      wisp.json_response(response, 200)
+    }
+
+    Error(AlreadyExists(email)) -> {
+      let details = json.object([#("email", json.string(email))])
+
+      let response =
+        json.to_string_builder(
+          json.object([
+            #("status", json.string("error")),
+            #("message", json.string("Email already in use.")),
+            #("details", details),
+          ]),
+        )
+
+      wisp.json_response(response, 409)
+    }
+
+    Error(_) -> wisp.internal_server_error()
   }
 }
 
@@ -116,7 +133,7 @@ pub fn index(ctx: Context) -> Response {
 
 // Queries ---------------------------------------------------------------------
 
-fn create_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
+fn create_user(connection: Connection, user: NewUser) -> Result(User, AppErrors) {
   let sql =
     "
   INSERT INTO users (name, email, password_hash)
@@ -136,7 +153,8 @@ fn create_user(connection: Connection, user: NewUser) -> Result(User, Nil) {
 
   case returned {
     Ok(Returned(_, [user, ..])) -> Ok(user)
-    _ -> Error(Nil)
+    Error(ConstraintViolated(_, _, _)) -> Error(AlreadyExists(user.email))
+    _ -> Error(InternalError)
   }
 }
 

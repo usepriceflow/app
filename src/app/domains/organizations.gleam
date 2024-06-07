@@ -40,8 +40,7 @@ pub fn new_organization_decoder(
   let decoder =
     dynamic.decode1(NewOrganization, dynamic.field("name", dynamic.string))
 
-  json
-  |> decoder()
+  decoder(json)
 }
 
 // Routers ---------------------------------------------------------------------
