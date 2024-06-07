@@ -7,6 +7,7 @@ pub type Context {
 
 pub type AppErrors {
   NotFound(id: String)
+  UniqueConstraint(entity: String)
   InternalError
 }
 
