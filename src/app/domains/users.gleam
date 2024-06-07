@@ -5,7 +5,6 @@ import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/json
 import gleam/pgo.{type Connection, ConstraintViolated, Returned}
-import gleam/result.{try}
 import wisp.{type Request, type Response}
 
 // Types -----------------------------------------------------------------------
@@ -109,25 +108,33 @@ pub fn create(req: Request, ctx: Context) -> Response {
 }
 
 pub fn index(ctx: Context) -> Response {
-  let result = {
-    use users <- try(fetch_users(ctx.db))
-    Ok(
-      json.to_string_builder(
-        json.array(users, fn(user) {
-          json.object([
-            #("id", json.int(user.id)),
-            #("name", json.string(user.name)),
-            #("email", json.string(user.email)),
-            #("password_hash", json.string(user.password_hash)),
-          ])
-        }),
-      ),
-    )
-  }
+  let users = fetch_users(ctx.db)
 
-  case result {
-    Ok(json) -> wisp.json_response(json, 200)
-    Error(Nil) -> wisp.unprocessable_entity()
+  case users {
+    Ok(users) -> {
+      let data =
+        json.object([
+          #(
+            "users",
+            json.array(users, fn(user) {
+              json.object([
+                #("id", json.int(user.id)),
+                #("name", json.string(user.name)),
+                #("email", json.string(user.email)),
+              ])
+            }),
+          ),
+        ])
+
+      let result =
+        json.to_string_builder(
+          json.object([#("status", json.string("success")), #("data", data)]),
+        )
+
+      wisp.json_response(result, 200)
+    }
+
+    Error(_) -> wisp.internal_server_error()
   }
 }
 
@@ -158,7 +165,7 @@ fn create_user(connection: Connection, user: NewUser) -> Result(User, AppErrors)
   }
 }
 
-fn fetch_users(connection: Connection) -> Result(List(User), Nil) {
+fn fetch_users(connection: Connection) -> Result(List(User), AppErrors) {
   let sql =
     "
   SELECT id, name, email, password_hash
@@ -169,6 +176,6 @@ fn fetch_users(connection: Connection) -> Result(List(User), Nil) {
 
   case returned {
     Ok(Returned(_, users)) -> Ok(users)
-    _ -> Error(Nil)
+    _ -> Error(InternalError)
   }
 }
