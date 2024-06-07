@@ -4,13 +4,13 @@ import gleam/http.{Get, Post}
 import gleam/int
 import gleam/json
 import gleam/pgo.{type Connection, Returned}
-import gleam/result.{try}
+import gleam/result
 import wisp.{type Request, type Response}
 
 // Types -----------------------------------------------------------------------
 
-pub type NewOrganization {
-  NewOrganization(name: String)
+pub type MaybeOrganization {
+  MaybeOrganization(name: String)
 }
 
 pub type Organization {
@@ -34,11 +34,11 @@ pub fn organization_decoder(
 }
 
 /// Decodes the JSON blob from the POST to /organizations
-pub fn new_organization_decoder(
+pub fn maybe_organization_decoder(
   json: Dynamic,
-) -> Result(NewOrganization, List(DecodeError)) {
+) -> Result(MaybeOrganization, List(DecodeError)) {
   let decoder =
-    dynamic.decode1(NewOrganization, dynamic.field("name", dynamic.string))
+    dynamic.decode1(MaybeOrganization, dynamic.field("name", dynamic.string))
 
   decoder(json)
 }
@@ -64,7 +64,7 @@ pub fn one(req: Request, ctx: Context, id: String) -> Response {
 
 pub fn create(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
-  let maybe_organization = new_organization_decoder(json)
+  let maybe_organization = maybe_organization_decoder(json)
   let organization = case maybe_organization {
     Ok(organization) -> create_organization(ctx.db, organization)
     Error(_) -> Error(InternalError)
@@ -91,23 +91,32 @@ pub fn create(req: Request, ctx: Context) -> Response {
 }
 
 pub fn index(ctx: Context) -> Response {
-  let result = {
-    use organizations <- try(fetch_organizations(ctx.db))
-    Ok(
-      json.to_string_builder(
-        json.array(organizations, fn(organization) {
-          json.object([
-            #("id", json.int(organization.id)),
-            #("name", json.string(organization.name)),
-          ])
-        }),
-      ),
-    )
-  }
+  let organizations = fetch_organizations(ctx.db)
 
-  case result {
-    Ok(json) -> wisp.json_response(json, 200)
-    Error(Nil) -> wisp.unprocessable_entity()
+  case organizations {
+    Ok(organizations) -> {
+      let data =
+        json.object([
+          #(
+            "organizations",
+            json.array(organizations, fn(organization) {
+              json.object([
+                #("id", json.int(organization.id)),
+                #("name", json.string(organization.name)),
+              ])
+            }),
+          ),
+        ])
+
+      let result =
+        json.to_string_builder(
+          json.object([#("status", json.string("success")), #("data", data)]),
+        )
+
+      wisp.json_response(result, 200)
+    }
+
+    Error(_) -> wisp.internal_server_error()
   }
 }
 
@@ -150,7 +159,7 @@ pub fn show(ctx: Context, id: String) -> Response {
 
 pub fn create_organization(
   connection: Connection,
-  organization: NewOrganization,
+  organization: MaybeOrganization,
 ) -> Result(Organization, AppErrors) {
   let sql =
     "
@@ -175,7 +184,7 @@ pub fn create_organization(
 
 pub fn fetch_organizations(
   connection: Connection,
-) -> Result(List(Organization), Nil) {
+) -> Result(List(Organization), AppErrors) {
   let sql =
     "
   SELECT id, name
@@ -186,7 +195,7 @@ pub fn fetch_organizations(
 
   case returned {
     Ok(Returned(_, organizations)) -> Ok(organizations)
-    _ -> Error(Nil)
+    _ -> Error(InternalError)
   }
 }
 
