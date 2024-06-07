@@ -1,7 +1,6 @@
-import app/contexts/web_contexts.{type Context}
-import app/rest/organization_endpoints as organizations
-import app/rest/user_endpoints as users
-import app/web.{middleware}
+import app/domains/organizations
+import app/domains/users
+import app/web.{type Context, middleware}
 import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
