@@ -9,6 +9,7 @@ packages = [
   { name = "castore", version = "1.0.7", build_tools = ["mix"], requirements = [], otp_app = "castore", source = "hex", outer_checksum = "DA7785A4B0D2A021CD1292A60875A784B6CAEF71E76BF4917BDEE1F390455CF5" },
   { name = "certifi", version = "2.13.0", build_tools = ["rebar3"], requirements = [], otp_app = "certifi", source = "hex", outer_checksum = "8F3D9533A0F06070AFDFD5D596B32E21C6580667A492891851B0E2737BC507A1" },
   { name = "comeonin", version = "5.4.0", build_tools = ["mix"], requirements = [], otp_app = "comeonin", source = "hex", outer_checksum = "796393A9E50D01999D56B7B8420AB0481A7538D0CAF80919DA493B4A6E51FAF1" },
+  { name = "cors_builder", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_http", "gleam_stdlib", "mist", "wisp"], otp_app = "cors_builder", source = "hex", outer_checksum = "951B5B648E958BD6181A6EED98BCA4EEB302B83DC7DCE2954B3462114209EC43" },
   { name = "elixir_make", version = "0.8.4", build_tools = ["mix"], requirements = ["castore", "certifi"], otp_app = "elixir_make", source = "hex", outer_checksum = "6E7F1D619B5F61DFABD0A20AA268E575572B542AC31723293A4C1A567D5EF040" },
   { name = "envoy", version = "1.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "envoy", source = "hex", outer_checksum = "CFAACCCFC47654F7E8B75E614746ED924C65BD08B1DE21101548AC314A8B6A41" },
   { name = "exception", version = "2.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "exception", source = "hex", outer_checksum = "F5580D584F16A20B7FCDCABF9E9BE9A2C1F6AC4F9176FA6DD0B63E3B20D450AA" },
@@ -38,7 +39,8 @@ packages = [
 ]
 
 [requirements]
-antigone = { version = ">= 1.1.0 and < 2.0.0"}
+antigone = { version = ">= 1.1.0 and < 2.0.0" }
+cors_builder = { version = ">= 1.0.0 and < 2.0.0"}
 envoy = { version = ">= 1.0.1 and < 2.0.0" }
 gleam_erlang = { version = ">= 0.25.0 and < 1.0.0" }
 gleam_http = { version = ">= 3.6.0 and < 4.0.0" }

@@ -10,13 +10,13 @@ brew install watchexec
 watchexec --restart --verbose --clear --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run"
 ```
 
-To take this a step further, I created a `Makefile` and added this as a `watch` command:
+To take this a step further, I created a `Makefile` and added this as a `run` command:
 
 ```make
-.PHONY: watch
+.PHONY: run
 
-watch:
+run:
 	watchexec --restart --verbose --clear --wrap-process=session --stop-signal SIGTERM --exts gleam --debounce 500ms --watch src/ -- "gleam run"
 ```
 
-Now, I can just type `make watch` to start my server!
+Now, I can just type `make run` to start my server!

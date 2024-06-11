@@ -43,7 +43,7 @@ pub fn maybe_organization_decoder(
   decoder(json)
 }
 
-// Routers ---------------------------------------------------------------------
+// Handlers --------------------------------------------------------------------
 
 pub fn all(req: Request, ctx: Context) -> Response {
   case req.method {
