@@ -46,7 +46,7 @@ pub fn user_decoder(tuple: Dynamic) -> Result(User, List(DecodeError)) {
   decoder(tuple)
 }
 
-// Routers ---------------------------------------------------------------------
+// Handlers --------------------------------------------------------------------
 
 pub fn all(req: Request, ctx: Context) -> Response {
   case req.method {
