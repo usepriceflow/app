@@ -1,10 +1,17 @@
 import app/web.{type AppErrors, type Context, InternalError, NotFound}
+import app/web/layout.{layout}
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/http.{Get, Post}
 import gleam/int
 import gleam/json
+import gleam/list
 import gleam/pgo.{type Connection, Returned}
 import gleam/result
+import lustre/attribute.{class, type_}
+import lustre/element.{text}
+import lustre/element/html.{
+  button, div, h1, hr, p, table, tbody, td, th, thead, tr,
+}
 import wisp.{type Request, type Response}
 
 // Types -----------------------------------------------------------------------
@@ -47,7 +54,7 @@ pub fn maybe_organization_decoder(
 
 pub fn all(req: Request, ctx: Context) -> Response {
   case req.method {
-    Get -> index(ctx)
+    Get -> index(req, ctx)
     Post -> create(req, ctx)
     _ -> wisp.method_not_allowed([Post, Get])
   }
@@ -90,32 +97,11 @@ pub fn create(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn index(ctx: Context) -> Response {
+pub fn index(req: Request, ctx: Context) -> Response {
   let organizations = fetch_organizations(ctx.db)
 
   case organizations {
-    Ok(organizations) -> {
-      let data =
-        json.object([
-          #(
-            "organizations",
-            json.array(organizations, fn(organization) {
-              json.object([
-                #("id", json.int(organization.id)),
-                #("name", json.string(organization.name)),
-              ])
-            }),
-          ),
-        ])
-
-      let result =
-        json.to_string_builder(
-          json.object([#("status", json.string("success")), #("data", data)]),
-        )
-
-      wisp.json_response(result, 200)
-    }
-
+    Ok(organizations) -> index_view(req, organizations)
     Error(_) -> wisp.internal_server_error()
   }
 }
@@ -217,4 +203,70 @@ pub fn get_organization_by_id(
     Ok(Returned(_, [organization])) -> Ok(organization)
     _ -> Error(NotFound(int.to_string(id)))
   }
+}
+
+// VIEWS -----------------------------------------------------------------------
+
+fn index_view(req: Request, organizations: List(Organization)) -> Response {
+  let response =
+    layout(
+      req,
+      div([], [
+        div([class("flex justify-between")], [
+          h1([class("font-bold text-neutral-700 text-xl mb-2")], [
+            text("Organizations"),
+          ]),
+          button(
+            [
+              type_("button"),
+              class(
+                "rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+              ),
+            ],
+            [text("Add Organization")],
+          ),
+        ]),
+        div([class("mb-4")], [
+          p([], [text("A list of all the organizations in PriceFlow.")]),
+        ]),
+        hr([class("my-8 text-neutral-400")]),
+        table([class("min-w-full divide-y divide-neutral-200")], [
+          thead([], [
+            tr([], [
+              th(
+                [
+                  class(
+                    "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900",
+                  ),
+                ],
+                [element.text("ID")],
+              ),
+              th(
+                [
+                  class(
+                    "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900",
+                  ),
+                ],
+                [element.text("Name")],
+              ),
+            ]),
+          ]),
+          tbody(
+            [class("divide-y divide-neutral-200")],
+            list.map(organizations, fn(organization) {
+              tr([], [
+                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                  element.text(int.to_string(organization.id)),
+                ]),
+                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                  element.text(organization.name),
+                ]),
+              ])
+            }),
+          ),
+        ]),
+      ]),
+    )
+
+  wisp.html_response(response, 200)
 }
