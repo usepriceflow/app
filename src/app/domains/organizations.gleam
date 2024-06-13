@@ -213,58 +213,70 @@ fn index_view(req: Request, organizations: List(Organization)) -> Response {
       req,
       div([], [
         div([class("flex justify-between")], [
-          h1([class("font-bold text-neutral-700 text-xl mb-2")], [
-            text("Organizations"),
-          ]),
+          h1(
+            [
+              class(
+                "font-bold text-neutral-700 dark:text-neutral-50 text-xl mb-2",
+              ),
+            ],
+            [text("Organizations")],
+          ),
           button(
             [
               type_("button"),
               class(
-                "rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
+                "rounded-md bg-blue-600 dark:bg-neutral-700 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
               ),
             ],
-            [text("Add Organization")],
+            [text("Create Organization")],
           ),
         ]),
         div([class("mb-4")], [
           p([], [text("A list of all the organizations in PriceFlow.")]),
         ]),
-        hr([class("my-8 text-neutral-400")]),
-        table([class("min-w-full divide-y divide-neutral-200")], [
-          thead([], [
-            tr([], [
-              th(
-                [
-                  class(
-                    "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900",
-                  ),
-                ],
-                [element.text("ID")],
-              ),
-              th(
-                [
-                  class(
-                    "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900",
-                  ),
-                ],
-                [element.text("Name")],
-              ),
-            ]),
-          ]),
-          tbody(
-            [class("divide-y divide-neutral-200")],
-            list.map(organizations, fn(organization) {
+        hr([class("h-px border-0 my-8 bg-neutral-400 dark:bg-neutral-500")]),
+        table(
+          [
+            class(
+              "min-w-full divide-y divide-neutral-200 dark:divide-neutral-500",
+            ),
+          ],
+          [
+            thead([], [
               tr([], [
-                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
-                  element.text(int.to_string(organization.id)),
-                ]),
-                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
-                  element.text(organization.name),
-                ]),
-              ])
-            }),
-          ),
-        ]),
+                th(
+                  [
+                    class(
+                      "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
+                    ),
+                  ],
+                  [element.text("ID")],
+                ),
+                th(
+                  [
+                    class(
+                      "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
+                    ),
+                  ],
+                  [element.text("Name")],
+                ),
+              ]),
+            ]),
+            tbody(
+              [class("divide-y divide-neutral-200 dark:divide-neutral-500")],
+              list.map(organizations, fn(organization) {
+                tr([], [
+                  td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                    element.text(int.to_string(organization.id)),
+                  ]),
+                  td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                    element.text(organization.name),
+                  ]),
+                ])
+              }),
+            ),
+          ],
+        ),
       ]),
     )
 

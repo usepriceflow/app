@@ -7,9 +7,9 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- middleware(req)
 
   case wisp.path_segments(req) {
-    ["organizations"] -> organizations.all(req, ctx)
+    ["admin", "organizations"] -> organizations.all(req, ctx)
     ["organization", id] -> organizations.one(req, ctx, id)
-    ["users"] -> users.all(req, ctx)
+    ["admin", "users"] -> users.all(req, ctx)
     _ -> wisp.not_found()
   }
 }
