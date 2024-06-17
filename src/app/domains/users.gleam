@@ -1,6 +1,6 @@
 import antigone
 import app/web.{type AppErrors, type Context, AlreadyExists, InternalError}
-import app/web/layout.{layout}
+import app/web/components/layouts.{admin_layout}
 import gleam/bit_array
 import gleam/dynamic.{type DecodeError, type Dynamic}
 import gleam/http.{Get, Post}
@@ -169,88 +169,85 @@ fn fetch_users(connection: Connection) -> Result(List(User), AppErrors) {
 // Views -----------------------------------------------------------------------
 
 fn index_view(req: Request, users: List(User)) -> Response {
-  let response =
-    layout(
-      req,
-      div([], [
-        div([class("flex justify-between")], [
-          h1(
-            [
-              class(
-                "font-bold text-neutral-700 dark:text-neutral-50 text-xl mb-2",
-              ),
-            ],
-            [text("Users")],
-          ),
-          button(
-            [
-              type_("button"),
-              class(
-                "rounded-md bg-blue-600 dark:bg-neutral-700 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
-              ),
-            ],
-            [text("Add Admin User")],
-          ),
-        ]),
-        div([class("mb-4")], [
-          p([], [text("A list of all the admin users in PriceFlow.")]),
-        ]),
-        hr([class("h-px border-0 my-8 bg-neutral-400 dark:bg-neutral-500")]),
-        table(
+  admin_layout(
+    req,
+    div([], [
+      div([class("flex justify-between")], [
+        h1(
           [
             class(
-              "min-w-full divide-y divide-neutral-200 dark:divide-neutral-500",
+              "font-bold text-neutral-700 dark:text-neutral-50 text-xl mb-2",
             ),
           ],
+          [text("Users")],
+        ),
+        button(
           [
-            thead([], [
-              tr([], [
-                th(
-                  [
-                    class(
-                      "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
-                    ),
-                  ],
-                  [element.text("ID")],
-                ),
-                th(
-                  [
-                    class(
-                      "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
-                    ),
-                  ],
-                  [element.text("Name")],
-                ),
-                th(
-                  [
-                    class(
-                      "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
-                    ),
-                  ],
-                  [element.text("Email")],
-                ),
-              ]),
-            ]),
-            tbody(
-              [class("divide-y divide-neutral-200 dark:divide-neutral-500")],
-              list.map(users, fn(user) {
-                tr([], [
-                  td([class("whitespace-nowrap px-3 py-4 text-sm")], [
-                    element.text(int.to_string(user.id)),
-                  ]),
-                  td([class("whitespace-nowrap px-3 py-4 text-sm")], [
-                    element.text(user.name),
-                  ]),
-                  td([class("whitespace-nowrap px-3 py-4 text-sm")], [
-                    element.text(user.email),
-                  ]),
-                ])
-              }),
+            type_("button"),
+            class(
+              "rounded-md bg-blue-600 dark:bg-neutral-700 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600",
             ),
           ],
+          [text("Add Admin User")],
         ),
       ]),
-    )
-
-  wisp.html_response(response, 200)
+      div([class("mb-4")], [
+        p([], [text("A list of all the admin users in PriceFlow.")]),
+      ]),
+      hr([class("h-px border-0 my-8 bg-neutral-400 dark:bg-neutral-500")]),
+      table(
+        [
+          class(
+            "min-w-full divide-y divide-neutral-200 dark:divide-neutral-500",
+          ),
+        ],
+        [
+          thead([], [
+            tr([], [
+              th(
+                [
+                  class(
+                    "py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
+                  ),
+                ],
+                [element.text("ID")],
+              ),
+              th(
+                [
+                  class(
+                    "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
+                  ),
+                ],
+                [element.text("Name")],
+              ),
+              th(
+                [
+                  class(
+                    "px-3 py-3.5 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-300",
+                  ),
+                ],
+                [element.text("Email")],
+              ),
+            ]),
+          ]),
+          tbody(
+            [class("divide-y divide-neutral-200 dark:divide-neutral-500")],
+            list.map(users, fn(user) {
+              tr([], [
+                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                  element.text(int.to_string(user.id)),
+                ]),
+                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                  element.text(user.name),
+                ]),
+                td([class("whitespace-nowrap px-3 py-4 text-sm")], [
+                  element.text(user.email),
+                ]),
+              ])
+            }),
+          ),
+        ],
+      ),
+    ]),
+  )
 }
